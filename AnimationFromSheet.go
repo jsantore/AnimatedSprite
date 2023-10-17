@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"image"
 	"log"
 	"path"
 )
@@ -13,69 +14,138 @@ import (
 var EmbeddedAssets embed.FS
 
 const (
-	WINDOW_WIDTH   = 1000
-	WINDOW_HEIGHT  = 1000
-	COIN_DIMENSION = 512.0
-	FRAME_COUNT    = 4
+	WINDOW_WIDTH     = 1000
+	WINDOW_HEIGHT    = 1000
+	COIN_DIMENSION   = 512.0
+	GUY_FRAME_WIDTH  = 108
+	GUY_HEIGHT       = 140
+	FRAME_COUNT      = 4
+	FRAMES_PER_SHEET = 8
 )
 
 const (
-	UP = iota
-	DOWN
+	RIGHT = iota
 	LEFT
-	RIGHT
+	UP
+	DOWN
 )
 
-type AnimatedSpriteDemo2 struct {
-	Raccoon    []*ebiten.Image
-	Frame      int
-	FrameDelay int
+type PlayerSprite struct {
+	spriteSheet *ebiten.Image
+	xLoc        int
+	direction   int
+	frame       int
+	frameDelay  int
 }
 
-func (demo *AnimatedSpriteDemo2) Update() error {
-	demo.FrameDelay += 1
-	if demo.FrameDelay%5 == 0 {
-		demo.Frame += 1
-		if demo.Frame >= len(demo.Raccoon) {
-			demo.Frame = 0
+type AnimatedSpriteDemo3 struct {
+	player PlayerSprite
+}
+
+func (demoGame *AnimatedSpriteDemo3) Update() error {
+	getPlayerInput(demoGame)
+	demoGame.player.frameDelay += 1
+	if demoGame.player.frameDelay%FRAME_COUNT == 0 {
+		demoGame.player.frame += 1
+		if demoGame.player.frame >= FRAMES_PER_SHEET {
+			demoGame.player.frame = 0
 		}
+		if demoGame.player.direction == LEFT {
+			demoGame.player.xLoc -= 5
+		} else if demoGame.player.direction == RIGHT {
+			demoGame.player.xLoc += 5
+		}
+
 	}
 	return nil
 }
 
-func (demo AnimatedSpriteDemo2) Draw(screen *ebiten.Image) {
-	drawOps := ebiten.DrawImageOptions{}
-	drawOps.GeoM.Reset()
-	//drawOps.GeoM.Translate(float64(WINDOW_WIDTH/2), float64(WINDOW_HEIGHT/2))
-	screen.DrawImage(demo.Raccoon[demo.Frame], &drawOps)
+func getPlayerInput(game *AnimatedSpriteDemo3) {
+	if ebiten.IsKeyPressed(ebiten.KeyArrowLeft) && game.player.xLoc > 0 {
+		game.player.direction = LEFT
+	} else if ebiten.IsKeyPressed(ebiten.KeyArrowRight) &&
+		game.player.xLoc < WINDOW_WIDTH-GUY_FRAME_WIDTH {
+		game.player.direction = RIGHT
+	}
 }
 
-func (demo AnimatedSpriteDemo2) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
+func (demoGame AnimatedSpriteDemo3) Draw(screen *ebiten.Image) {
+	yLoc := 300.0 //when you add up and down move this to the player sprite and update it in update
+	op := &ebiten.DrawImageOptions{}
+	op.GeoM.Reset()
+	op.GeoM.Translate(float64(demoGame.player.xLoc), yLoc)
+	screen.DrawImage(demoGame.player.spriteSheet.SubImage(image.Rect(demoGame.player.frame*GUY_FRAME_WIDTH,
+		demoGame.player.direction*GUY_HEIGHT,
+		demoGame.player.frame*GUY_FRAME_WIDTH+GUY_FRAME_WIDTH,
+		demoGame.player.direction*GUY_HEIGHT+GUY_HEIGHT)).(*ebiten.Image), op)
+}
+
+func (demoGame AnimatedSpriteDemo3) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
 	return outsideWidth, outsideHeight
 }
 
 func main() {
-	frames := LoadAllRaccoons()
-	ebiten.SetWindowSize(1000, 1000)
-	ebiten.SetWindowTitle("sliceOfImeages")
-	demo := AnimatedSpriteDemo2{
-		Raccoon:    frames,
-		Frame:      0,
-		FrameDelay: 0,
+	animationGuy := LoadEmbeddedImage("", "scottpilgrim_multiple.png")
+	myPlayer := PlayerSprite{spriteSheet: animationGuy,
+		xLoc: WINDOW_WIDTH / 2}
+	demo := AnimatedSpriteDemo3{
+		player: myPlayer,
 	}
+	ebiten.SetWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT)
+	ebiten.SetWindowTitle("Animated Sprite")
 	ebiten.RunGame(&demo)
 }
 
-func LoadAllRaccoons() []*ebiten.Image {
-	all_frames := make([]*ebiten.Image, 14, 20)
-	suffix_list := []string{"01", "03", "05", "07", "09", "11", "13", "15", "17", "19", "21", "23", "25", "27"}
-	for index, suffix := range suffix_list {
-		filename := fmt.Sprintf("victory-dance00%s.png", suffix)
-		frame_pict := LoadEmbeddedImage("victory-dance", filename)
-		all_frames[index] = frame_pict
-	}
-	return all_frames
-}
+//type AnimatedSpriteDemo2 struct {
+//	Raccoon    []*ebiten.Image
+//	Frame      int
+//	FrameDelay int
+//}
+//
+//func (demo *AnimatedSpriteDemo2) Update() error {
+//	demo.FrameDelay += 1
+//	if demo.FrameDelay%5 == 0 {
+//		demo.Frame += 1
+//		if demo.Frame >= len(demo.Raccoon) {
+//			demo.Frame = 0
+//		}
+//	}
+//	return nil
+//}
+//
+//func (demo AnimatedSpriteDemo2) Draw(screen *ebiten.Image) {
+//	drawOps := ebiten.DrawImageOptions{}
+//	drawOps.GeoM.Reset()
+//	//drawOps.GeoM.Translate(float64(WINDOW_WIDTH/2), float64(WINDOW_HEIGHT/2))
+//	screen.DrawImage(demo.Raccoon[demo.Frame], &drawOps)
+//}
+//
+//func (demo AnimatedSpriteDemo2) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
+//	return outsideWidth, outsideHeight
+//}
+//
+//func main() {
+//	frames := LoadAllRaccoons()
+//	ebiten.SetWindowSize(1000, 1000)
+//	ebiten.SetWindowTitle("sliceOfImeages")
+//	demo := AnimatedSpriteDemo2{
+//		Raccoon:    frames,
+//		Frame:      0,
+//		FrameDelay: 0,
+//	}
+//	ebiten.RunGame(&demo)
+//}
+//
+//func LoadAllRaccoons() []*ebiten.Image {
+//	all_frames := make([]*ebiten.Image, 14, 20)
+//	suffix_list := []string{"01", "03", "05", "07", "09", "11", "13", "15", "17", "19", "21", "23", "25", "27"}
+//	for index, suffix := range suffix_list {
+//		filename := fmt.Sprintf("victory-dance00%s.png", suffix)
+//		frame_pict := LoadEmbeddedImage("victory-dance", filename)
+//		all_frames[index] = frame_pict
+//	}
+//	return all_frames
+//}
 
 //type AnimatedSpriteDemo struct {
 //	CoinImage  *ebiten.Image
