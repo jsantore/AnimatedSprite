@@ -42,15 +42,12 @@ func main() {
 	}
 }
 func (demo *AnimatedSpriteDemo) Update() error {
-	demo.FrameDelay += 1
-	if demo.FrameDelay%5 == 0 {
-		demo.xFrame += 1
-		if demo.xFrame >= FRAME_COUNT {
-			demo.xFrame = 0
-			demo.yFrame += 1
-			if demo.yFrame >= FRAME_COUNT {
-				demo.yFrame = 0
-			}
+	demo.xFrame += 1
+	if demo.xFrame >= FRAME_COUNT {
+		demo.xFrame = 0
+		demo.yFrame += 1
+		if demo.yFrame >= FRAME_COUNT {
+			demo.yFrame = 0
 		}
 	}
 	return nil
